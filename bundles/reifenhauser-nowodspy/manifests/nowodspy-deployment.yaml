@@ -1,0 +1,34 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: {{name}}
+        env: {{env}}
+        sentry: dus
+    spec:
+      containers:
+      - name: {{name}}
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "256Mi"
+          requests:
+            cpu: "128m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/status/liveness
+            port: 5000
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        env:
+          - name: SENTRY_DSN
+            value: "{{sentry_dsn}}"
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}

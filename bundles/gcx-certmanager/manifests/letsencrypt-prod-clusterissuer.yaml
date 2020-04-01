@@ -1,0 +1,12 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{lego_email}}
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

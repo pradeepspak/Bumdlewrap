@@ -1,0 +1,141 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: {{name}}
+        env: {{env}}
+        cust: "all"
+        proj: "reifenhaeuser"
+        dbconn: "postgres"
+        sentry: "dus"
+        riot-int-api-access: "allow"
+    spec:
+      containers:
+      - name: {{name}}
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /api/status/liveness
+            port: {{nowodski_internal_port}}
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/status/readiness
+            port: {{nowodski_internal_port}}
+          timeoutSeconds: 3
+          initialDelaySeconds: 5
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "256Mi"
+          requests:
+            cpu: "128m"
+            memory: "128Mi"
+        ports:
+          - name: http
+            containerPort: {{nowodski_internal_port}}
+          - name: metrics
+            containerPort: 9568
+        env:
+          - name: KEYCLOAK_CLIENT_ID
+            value: {{keycloak_clientname}}
+          - name: KEYCLOAK_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{bw_password_container}}
+                key: {{keycloak_clientsecret}}
+          - name: POSTGRES_USER
+            value: {{postgres_user}}
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{bw_password_container}}
+                key: {{postgres_pass}}
+          - name: POSTGRES_DB
+            value: {{postgres_db}}
+          - name: POSTGRES_HOST
+            value: {{postgres_host}}
+          - name: KEYCLOAK_REALM
+            value: "{{keycloak_realm}}"
+          - name: KEYCLOAK_SESSION_LIMIT
+            value: "{{keycloak_session_limit}}"
+          - name: KEYCLOAK_EXTERNAL_HOST
+            value: "{{keycloak_external_host}}"
+          - name: KEYCLOAK_INTERNAL_HOST
+            value: "{{keycloak_internal_host}}"
+          - name: NOWODSKI_HOST
+            value: "{{nowodski_host}}"
+            # This is necessary to override the default kubernetes service _PORT
+            # environment variable
+          - name: NOWODSKI_PORT
+            value: "{{nowodski_internal_port}}"
+          - name: PORT
+            value: "{{nowodski_internal_port}}"
+          - name: NOWODSKI_SECRET_KEY_BASE
+            valueFrom:
+              secretKeyRef:
+                name: {{bw_password_container}}
+                key: {{nowodski_secret_key}}
+          - name: REPLACE_OS_VARS
+            value: "{{replace_os_vars}}"
+          - name: MQTT_HOST
+            value: "{{mqtt_host}}"
+          - name: MQTT_CLIENT_ID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          {% if mqtt_user != "" and mqtt_user != None %}
+          - name: MQTT_USERNAME
+            value: "{{mqtt_user}}"
+          - name: MQTT_PASSWORD
+            value: "{{mqtt_pass}}"
+          {% endif %}
+          - name: MQTT_PORT
+            value: "{{mqtt_port}}"
+          - name: SENTRY_DSN
+            value: "{{sentry_dsn}}"
+          - name: SENTRY_FRONTEND_DSN
+            value: "{{sentry_frontend_dsn}}"
+          - name: REDIS_HOSTNAME
+            value: "{{redis_hostname}}"
+          - name: REDIS_PORT
+            value: "{{redis_port}}"
+          - name: RIOT_INTERNAL_API_HOST
+            value: "{{riot_internal_api_host}}"
+          - name: NOWODSPY_API_HOST
+            value: "{{nowodspy_api_host}}"
+          - name: ENV
+            value: "{{env}}"
+          - name: GCP_BUCKET_NAME
+            value: "{{gcp_bucket_name}}"
+          - name: GCP_CREDENTIALS
+            value: "/secrets/gcp/pubsub-credentials.json"
+          - name: GCP_PROJECT
+            value: "{{gcp_project}}"
+          - name: GCP_PUBSUB_SUBSCRIPTION
+            value: "{{gcp_pubsub_subscription}}"
+            {% if mailjet_private_key != "" and mailjet_private_key != None %}
+          - name: MAILJET_API_KEY
+            value: "{{mailjet_api_key}}"
+          - name: MAILJET_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{bw_password_container}}
+                key: "{{mailjet_private_key}}"
+            {% endif %}
+        volumeMounts:
+        - mountPath: /secrets/gcp
+          name: nowodski-gcp
+      volumes:
+        - name: nowodski-gcp
+          secret:
+            secretName: nowodski-gcp-credentials
+            defaultMode: 420
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}

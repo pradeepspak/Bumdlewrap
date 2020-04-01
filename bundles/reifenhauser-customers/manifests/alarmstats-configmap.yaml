@@ -1,0 +1,22 @@
+data:
+  all.yaml: |
+    apiVersion: 1
+    deleteDatasources:
+      - name: InfluxDB
+        orgId: 1
+    datasources:
+      - name: InfluxDB
+        type: influxdb
+        access: proxy
+        orgId: 1
+        url: http://{{influx_host}}:8086
+        password: {{influx_pass}}
+        user: {{influx_user}}
+        database: {{influx_db}}
+        basicAuth:
+        basicAuthUser:
+        basicAuthPassword:
+        withCredentials:
+        isDefault: true
+        version: 1
+        editable: false

@@ -1,0 +1,51 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: docs
+  name: docs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docs
+  template:
+    metadata:
+      labels:
+        app: docs
+    spec:
+      containers:
+        - image: {{registry_host}}/{{gatekeeper_image}}:{{gatekeeper_version}}
+          name: keycloak-gatekeeper
+          ports:
+            - containerPort: 80
+              name: docs-http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi
+          volumeMounts:
+            - name: gatekeeper-config
+              mountPath: /config
+          args:
+            - "--config"
+            - "/config/config.yaml"
+        - image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+          name: docs
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 100m
+              memory: 150Mi
+      volumes:
+        - name: gatekeeper-config
+          configMap:
+            name: gatekeeper-config-docs

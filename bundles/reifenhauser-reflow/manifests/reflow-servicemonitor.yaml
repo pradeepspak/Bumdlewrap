@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: reflow
+  labels:
+    app: reflow
+spec:
+  endpoints:
+  - interval: 60s
+    path: /metrics
+    port: metrics
+    scheme: http
+  podTargetLabels:
+    - cust
+    - proj
+    - app
+    - env
+  jobLabel: reflow
+  namespaceSelector:
+    matchNames:
+    - {{namespace}}
+  selector:
+    matchLabels:
+      app: reflow

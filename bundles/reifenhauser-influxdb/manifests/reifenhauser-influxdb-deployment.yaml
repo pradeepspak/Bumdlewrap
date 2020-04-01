@@ -1,0 +1,96 @@
+metadata:
+  labels:
+    app: influxdb
+    env: {{env}}
+spec:
+  replicas: {{replicas}}
+  selector:
+    matchLabels:
+      app: influxdb
+      env: {{env}}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: influxdb
+        env: {{env}}
+      name: influxdb
+    spec:
+      containers:
+      - env:
+        - name: INFLUXDB_DB
+          value: {{influx_db}}
+        - name: INFLUXDB_USER
+          value: {{influx_user}}
+        - name: INFLUXDB_USER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: {{influx_password}}
+              name: {{bw_password_container}}
+        - name: INFLUXDB_ADMIN_USER
+          value: {{influx_admin_user}}
+        - name: INFLUXDB_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: {{influx_admin_password}}
+              name: {{bw_password_container}}
+        - name: INFLUXDB_REPORTING_DISABLED
+          value: "true"
+        image: {{registry_image}}:{{registry_version}}
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 8086
+          timeoutSeconds: 1
+        name: influxdb
+        ports:
+        - containerPort: 8086
+          name: http-api
+          protocol: TCP
+        - containerPort: 8088
+          name: rpc
+          protocol: TCP
+        - containerPort: 8090
+          name: backend
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 45
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 8086
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          limits:
+            cpu: "1"
+            memory: "3Gi"
+          requests:
+            cpu: "500m"
+            memory: "2Gi"
+        volumeMounts:
+        - mountPath: /var/lib/influxdb
+          name: influxdbdata
+        - mountPath: /etc/influxdb
+          name: config
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: influxdbdata
+        persistentVolumeClaim:
+          claimName: influxdb
+      - name: config
+        configMap:
+          defaultMode: 420
+          items:
+          - key: influxdb.conf
+            path: influxdb.conf
+          name: influxdb

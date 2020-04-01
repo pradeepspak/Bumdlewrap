@@ -1,0 +1,9 @@
+metadata:
+  annotations:
+    {{storageclass}}
+spec:
+  accessModes:
+    - {{access_mode}}
+  resources:
+    requests:
+      storage: {{size}}

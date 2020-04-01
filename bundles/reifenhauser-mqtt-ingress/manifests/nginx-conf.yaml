@@ -1,0 +1,13 @@
+data:
+  nginx.conf: |+
+    load_module "/usr/lib/nginx/modules/ngx_http_js_module.so";
+    load_module "/usr/lib/nginx/modules/ngx_stream_js_module.so";
+
+
+    events {
+        worker_connections 1024;
+    }
+
+    stream {
+        include stream-conf.d/*.conf;
+    }

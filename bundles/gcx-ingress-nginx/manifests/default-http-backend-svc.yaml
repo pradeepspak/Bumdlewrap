@@ -1,0 +1,13 @@
+metadata:
+  labels:
+    app: default-http-backend
+  name: default-http-backend
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: default-http-backend
+  sessionAffinity: None
+  type: ClusterIP

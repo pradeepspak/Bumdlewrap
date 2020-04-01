@@ -1,0 +1,45 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: {{name}}
+        env: {{env}}
+        delete_after_deployment: "true"
+    spec:
+      containers:
+      - name: {{name}}
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        env:
+        - name: REFACS_HOST
+          value: {{refacs_host}}
+        - name: REFACS_MONITORING_DUMP_FOLDER
+          value: {{refacs_tmp}}
+        - name: REFACS_MSSQL_DB
+          value: {{mssql_db}}
+        - name: REFACS_MSSQL_HOST
+          value: {{mssql_host}}
+        - name: REFACS_MSSQL_USER
+          value: {{mssql_user}}
+        - name: REFACS_MSSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{mssql_pass}}
+        - name: REFACS_SQLITE_DB
+          value: {{sqllite_db}}
+        - name: REFACS_API_KEY
+          value: "{{api_key}}"
+        - name: REFACS_SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{secret_key}}
+        - name: REPLACE_OS_VARS
+          value: "{{replace_os_vars}}"
+        - name: SENTRY_DSN
+          value: {{sentry_url}}
+      imagePullSecrets:
+      - name: {{registry_secret}}

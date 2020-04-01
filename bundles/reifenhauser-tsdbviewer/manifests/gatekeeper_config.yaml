@@ -1,0 +1,39 @@
+data:
+  config.yaml: |
+    discovery-url: "{{discovery_url}}"
+    # the client id for the 'client' application
+    client-id: "{{client_id}}"
+    # the secret associated to the 'client' application
+    client-secret: "{{client_secret}}"
+    # the interface definition you wish the proxy to listen, all interfaces is specified as ':<port>', unix sockets as unix://<REL_PATH>|</ABS PATH>
+    listen: 0.0.0.0:80
+    # whether to enable refresh tokens
+    enable-refresh-tokens: true
+    # the location of a certificate you wish the proxy to use for TLS support
+    # tls-cert:
+    # the location of a private key for TLS
+    # tls-private-key:
+    # the redirection url, essentially the site url, note: /oauth/callback is added at the end
+    redirection-url: "{{redirection_url}}"
+    # the encryption key used to encode the session state
+    encryption-key: c4g1JkWHxcZp3gr5PiyXZGWJwzoS4bvY
+    # the upstream endpoint which we should proxy request
+    upstream-url: http://127.0.0.1:3000
+    secure-cookie: true
+    enable-authorization-header: false
+    add-claims:
+      - openid
+    # additional scopes to add to add to the default (openid+email+profile)
+    scopes:
+    # - vpn-user
+    # a collection of resource i.e. urls that you wish to protect
+    resources:
+    - uri: /*
+      # the methods on this url that should be protected, if missing, we assuming all
+      # a list of roles the user must have in order to access urls under the above
+      # If all you want is authentication ONLY, simply remove the roles array - the user must be authenticated but
+      # no roles are required
+      require-any-role: true
+      roles:
+      - "tsdb_admin"
+      - "tsdb_viewer"

@@ -1,0 +1,9 @@
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{service_port}}
+      targetPort: {{signed_url_service_internal_port}}
+      protocol: TCP
+  selector:
+    app: {{name}}

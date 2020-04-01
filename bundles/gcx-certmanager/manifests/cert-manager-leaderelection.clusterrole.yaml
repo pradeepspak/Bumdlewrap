@@ -1,0 +1,13 @@
+metadata:
+  labels:
+    app: cert-manager
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+  - update
+  - patch

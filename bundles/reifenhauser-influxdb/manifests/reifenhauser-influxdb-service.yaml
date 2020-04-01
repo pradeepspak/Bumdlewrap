@@ -1,0 +1,13 @@
+spec:
+  ports:
+  - name: api
+    port: 8086
+    protocol: TCP
+    targetPort: 8086
+  - name: rpc
+    port: 8088
+    protocol: TCP
+    targetPort: 8088
+  selector:
+    app: influxdb
+  type: ClusterIP

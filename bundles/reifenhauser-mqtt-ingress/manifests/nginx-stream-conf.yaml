@@ -1,0 +1,199 @@
+data:
+  mqtt.js: |
+    var client_messages = 1;
+    var client_id_str = "-";
+    var CONNECT_PACKET = 16;
+    var SUPPORTED_PROTOCOL_LEVELS = [3, 4]
+    
+    /* This function checks if the client-id in the MQTT packet equals to the
+     * common name in the client certificate.
+     * We have to check this just for the MQTT connect packet.
+     * See also '3.1 CONNECT – Client requests a connection to a Server' in the
+     * MQTT specification.
+     * http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028
+     */
+    function checkClientId(s) {
+      if ( !s.fromUpstream ) {
+        if ( s.buffer.toString().length == 0  ) {
+          s.log("MQTT: No buffer yet");
+          return s.AGAIN;
+        } else if ( client_messages == 1 ) {
+          var packet_type = s.buffer.charCodeAt(0);
+          if ( packet_type == CONNECT_PACKET ) {
+            s.log("MQTT: packet = " + packet_type.toString());
+    
+            var data = remaining(s.buffer.substr(1))
+    
+            if (data.length != data.buffer.length) {
+              s.log("MQTT: Invalid packet")
+            }
+    
+            var packet = connect_packet(data.buffer, s)
+    
+            // This script supports just the protocol level 3 and 4.
+            if (!SUPPORTED_PROTOCOL_LEVELS.includes(packet.protocol_level)) {
+              s.log("MQTT: Unsuported protocol level")
+              return s.ERROR;
+            }
+    
+            // The client id is always the first value in the payload.
+            var client_id = packet.payload.shift()
+            s.log("MQTT: client id = " + client_id);
+    
+            var client_cert_cn = parseCSKVpairs(s.variables.ssl_client_s_dn, "CN");
+    
+            if ( client_cert_cn.length && client_cert_cn != client_id ) {
+              s.log("MQTT: Client certificate common name (" + client_cert_cn + ") does not match client ID");
+              return s.ERROR;
+            }
+          } else {
+            s.log("MQTT: Received unexpected packet type: " + packet_type.toString());
+          }
+        }
+        client_messages++;
+      }
+    
+      return s.OK;
+    }
+    
+    /* Returns an object with the length and the buffer of the remaining data.
+     */
+    function remaining(buffer) {
+      var multiplier = 1;
+      var len_val = 0;
+      var len_byte;
+      for (var pos = 0; pos < 5; pos++ ) {
+        len_byte = buffer.charCodeAt(pos);
+        if ( len_byte == 0 ) break;
+        len_val += (len_byte & 127) * multiplier;
+        multiplier *= 128;
+      }
+    
+      return {length: len_val, buffer: buffer.substr(pos)};
+    }
+    
+    /* Returns an object representing a connect packet.
+     */
+    function connect_packet(buffer, s) {
+      var result,
+          protocol_name,
+          protocol_level,
+          connect_flags,
+          keep_alive,
+          payload = [];
+    
+      // Protocol Name
+      result = length_prefixed_value(buffer, s);
+      protocol_name = result.value;
+      buffer = result.rest;
+    
+      if (buffer.length >= 5) {
+        // Protocol Level
+        protocol_level = buffer.charCodeAt(0);
+    
+        // Connect Flags
+        connect_flags = buffer.charCodeAt(1);
+    
+        // Keep Alive
+        keep_alive = buffer.charCodeAt(2) << 8 | buffer.charCodeAt(3);
+    
+        if (SUPPORTED_PROTOCOL_LEVELS.includes(protocol_level)) {
+          // Payload
+          payload = length_prefixed_values(buffer.substr(4), s)
+        }
+      }
+    
+      s.log("MQTT: Protocol name: " + protocol_name)
+      s.log("MQTT: Protocol level: " + protocol_level)
+    
+      return {
+        protocol_name: protocol_name,
+        protocol_level: protocol_level,
+        connect_flags: connect_flags,
+        keep_alive: keep_alive,
+        payload: payload
+      };
+    }
+    
+    /* This function extracts the next prefixed length value from a buffer. It
+     * returns an object with the value and the rest of the buffer. In a case of an
+     * error, it returns {value: undefined, rest: ""}.
+     */
+    function length_prefixed_value(buffer, s) {
+      var value = undefined, rest = ""
+    
+      if (buffer.length >= 2) {
+        var len = buffer.charCodeAt(0) << 8 | buffer.charCodeAt(1);
+        if (buffer.length >= len + 2) {
+          value = buffer.substr(2, len);
+          rest = buffer.substr(len + 2);
+        }
+      }
+    
+      if (value == undefined) {
+        s.log("MQTT: Invalid length prefixed value")
+      }
+    
+      return {value: value, rest: rest}
+    }
+    
+    /* Returns a list of prefixed length values. It requires that the buffer just
+     * contains prefixed length values.
+     */
+    function length_prefixed_values(buffer, s) {
+      var list = [], result;
+    
+      while (buffer.length > 0) {
+        result = length_prefixed_value(buffer, s);
+        list.push(result.value);
+        buffer = result.rest;
+      }
+    
+      return list;
+    }
+    
+    function parseCSKVpairs(cskvpairs, key) {
+      if ( cskvpairs.length ) {
+        var kvpairs = cskvpairs.split(',');
+        for ( var i = 0; i < kvpairs.length; i++ ) {
+          var kvpair = kvpairs[i].split('=');
+    
+          if ( kvpair[0].toUpperCase() == key ) {
+            return kvpair[1];
+          }
+        }
+      }
+      return "";
+    }
+  stream_mqtt_healthcheck.conf: |
+    js_include /etc/nginx/stream-conf.d/mqtt.js;
+    log_format
+        mqtt '$remote_addr [$time_local] $protocol $status $bytes_received $bytes_sent $upstream_addr $ssl_client_fingerprint $ssl_client_serial';
+    upstream mqtt_broker {
+        server vernemq:1883;
+        zone
+        tcp_mem 64k;
+    }
+    server {
+        listen 1883;
+        proxy_pass mqtt_broker;
+        proxy_connect_timeout 30s;
+    }
+    server {
+        listen 8883 ssl;
+        preread_buffer_size 1k;
+        js_preread checkClientId;
+        ssl_protocols TLSv1.2;
+        ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256;
+        ssl_certificate /etc/tls-certs/tls.crt;
+        ssl_certificate_key /etc/tls-certs/tls.key;
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 10m;
+        ssl_verify_client on;
+        ssl_verify_depth 4;
+        ssl_client_certificate /etc/tls-certs/client-ca.crt;
+        access_log /dev/stdout mqtt;
+        error_log  /dev/stderr info;
+        proxy_pass mqtt_broker;
+        proxy_connect_timeout 30s;
+    }

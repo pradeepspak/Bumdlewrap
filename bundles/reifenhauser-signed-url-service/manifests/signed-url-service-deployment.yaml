@@ -1,0 +1,62 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: {{name}}
+        env: {{env}}
+        sentry: dus
+    spec:
+      containers:
+      - name: {{name}}
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "256Mi"
+          requests:
+            cpu: "128m"
+            memory: "128Mi"
+        env:
+          - name: REPLACE_OS_VARS
+            value: "{{replace_os_vars}}"
+          - name: MQTT_HOST
+            value: "{{mqtt_host}}"
+          - name: MQTT_CLIENT_ID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          {% if mqtt_user != "" and mqtt_user != None %}
+          - name: MQTT_USERNAME
+            value: "{{mqtt_user}}"
+          - name: MQTT_PASSWORD
+            value: "{{mqtt_pass}}"
+          {% endif %}
+          - name: MQTT_PORT
+            value: "{{mqtt_port}}"
+          - name: BUCKET_NONWOVEN_GRADING_IMAGES
+            value: "{{bucket_nonwoven_grading_images}}"
+          - name: BUCKET_CONDITION_MONITORING_WAV
+            value: "{{bucket_condition_monitoring_wav}}"
+          - name: URL_EXPIRE_TIME
+            value: "{{url_expire_time}}"
+          - name: ENV
+            value: "{{env}}"
+          - name: GCP_CREDENTIALS
+            value: "/secrets/gcp/credentials.json"
+          - name: RIOT_INTERNAL_API_HOST
+            value: "{{riot_internal_api_host}}"
+        volumeMounts:
+        - mountPath: /secrets/gcp
+          name: credentials
+      volumes:
+      - name: credentials
+        secret:
+          secretName: gcp-credentials
+          defaultMode: 420
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}

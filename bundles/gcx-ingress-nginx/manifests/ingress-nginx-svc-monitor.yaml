@@ -1,0 +1,11 @@
+metadata:
+  labels:
+    app: ingress-nginx-monitoring
+spec:
+  ports:
+  - name: monitor
+    port: 10254
+    protocol: TCP
+  selector:
+    app: ingress-nginx
+  type: ClusterIP

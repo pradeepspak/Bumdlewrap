@@ -1,0 +1,142 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: reclis
+        env: {{env}}
+        cust: {{customer}}
+        proj: reifenhaeuser
+        dbconn: "postgres"
+        mail: "mailjet"
+        tsdbconn: "true"
+        sentry: "dus"
+        riot-int-api-access: "allow"
+    spec:
+      containers:
+      - name: reclis
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /api/status/liveness
+            port: {{internal_port}}
+          timeoutSeconds: 5
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/status/readiness
+            port: {{internal_port}}
+          timeoutSeconds: 3
+          initialDelaySeconds: 30
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "512Mi"
+          requests:
+            cpu: "128m"
+            memory: "256Mi"
+        env:
+        - name: REDIS_HOSTNAME
+          value: "{{redis_host}}"
+        - name: REDIS_PORT
+          value: "{{redis_port}}"
+        - name: RECLIS_HOST
+          value: {{external_host}}
+        - name: RECLIS_PORT
+          value: "{{internal_port}}"
+        - name: RECLIS_CUSTOMER_ID
+          value: {{customer}}
+        - name: RECLIS_DB_HOST
+          value: {{postgres_host}}
+        - name: RECLIS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{postgres_pass}}
+        - name: RECLIS_DB_USER
+          value: {{postgres_user}}
+        - name: RECLIS_DB
+          value: {{postgres_db}}
+        - name: RECLIS_CONTACT_FORM_RECIPIENT
+          value: {{contact_form_recipient}}
+        - name: INFLUX_HOST
+          value: {{influx_host}}
+        - name: INFLUX_DATABASE
+          value: {{influx_db}}
+        - name: ALARM_STATISTICS_DATABASE
+          value: {{alarm_statistics_db}}
+        - name: INFLUX_USER
+          value: {{influx_user}}
+        - name: INFLUX_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{influx_pass}}
+        - name: KEYCLOAK_REALM
+          value: {{keycloak_realm}}
+        - name: KEYCLOAK_SESSION_LIMIT
+          value: "{{keycloak_session_limit}}"
+        - name: KEYCLOAK_INTERNAL_HOST
+          value: {{keycloak_internal_host}}
+        - name: KEYCLOAK_EXTERNAL_HOST
+          value: {{keycloak_external_host}}
+        - name: KEYCLOAK_CLIENT_ID
+          value: {{keycloak_client_id}}
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{keycloak_clientsecret}}
+        - name: KEYCLOAK_ADMIN_USERNAME
+          value: {{keycloak_admin_username}}
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{keycloak_admin_password}}
+        - name: MQTT_HOST
+          value: {{mqtt_host}}
+        {% if mqtt_user != "" and mqtt_user != None %}
+        - name: MQTT_USERNAME
+          value: {{mqtt_user}}
+        - name: MQTT_PASSWORD
+          value: {{mqtt_pass}}
+        {% endif %}
+        - name: MQTT_CLIENT_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: RECLIS_SECRET_KEY_BASE
+          value: {{secret_key_base}}
+        - name: REPLACE_OS_VARS
+          value: "{{replace_os_vars}}"
+        - name: SENTRY_DSN
+          value: {{sentry_dsn}}
+        - name: SENTRY_FRONTEND_DSN
+          value: {{sentry_frontend_dsn}}
+        - name: TMP_FOLDER
+          value: "/tmp/reclis"
+        - name: MAILJET_API_KEY
+          value: "{{mailjet_api_key}}"
+          {% if mailjet_private_key != "" and mailjet_private_key != None %}
+        - name: ENV
+          value: "{{ env }}"
+        - name: MAILJET_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: "{{mailjet_private_key}}"
+          {% endif %}
+        - name: NOWODSKI_API_HOST
+          value: {{nowodski_api_host}}
+        - name: NOWODSKI_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{bw_password_container}}
+              key: {{nowodski_service_token}}
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}

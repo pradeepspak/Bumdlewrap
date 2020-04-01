@@ -1,0 +1,45 @@
+metadata:
+  labels:
+    app: cert-manager
+rules:
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - certificates
+  - certificaterequests
+  verbs:
+  - create
+  - update
+  - delete
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - certificates
+  - certificaterequests
+  - issuers
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch

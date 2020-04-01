@@ -1,0 +1,5 @@
+data:
+  client-ca.crt: {{ca_chain}}
+  tls.crt: {{cert}}
+  tls.key: {{key}}
+type: kubernetes.io/tls

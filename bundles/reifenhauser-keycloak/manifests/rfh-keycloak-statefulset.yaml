@@ -1,0 +1,114 @@
+spec:
+  replicas: {{replicas}}
+  serviceName: keycloak-headless
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: keycloak
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: "keycloak"
+        env: "{{env}}"
+        dbconn: "postgres"
+        mail: "mailjet"
+    spec:
+      serviceAccountName: keycloak
+      containers:
+        - name: {{name}}
+          command:
+          - /scripts/keycloak.sh
+          image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+          env:
+            - name: KEYCLOAK_HOSTNAME
+              value: {{keycloak_hostname}}
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: KUBERNETES_LABELS
+              value: app=keycloak
+            - name: JGROUPS_DISCOVERY_PROTOCOL
+              value: dns.DNS_PING
+            - name: JGROUPS_DISCOVERY_PROPERTIES
+              value: "dns_query=keycloak-headless.{{namespace}}.svc.cluster.local"
+            {% if cluster_hoster == "minikube" %}
+            - name: KEYCLOAK_USER
+              value: {{keycloak_user}}
+            - name: KEYCLOAK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{bw_password_container}}
+                  key: {{keycloak_pass}}
+            {% endif %}
+            - name: DB_VENDOR
+              value: "POSTGRES"
+            - name: POSTGRES_PORT_5432_TCP_ADDR
+              value: {{postgres_host}}
+            - name: DB_ADDR
+              value: {{postgres_host}}
+              # Do not re-name this to DB_PORT - REFIOT-497
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+            - name: DB_USER
+              value: {{postgres_user}}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{bw_password_container}}
+                  key: {{postgres_pass}}
+            - name: DB_DATABASE
+              value: {{postgres_db}}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: jgroups
+              containerPort: 7600
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 900m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /auth/
+              port: http
+            initialDelaySeconds: 60
+            failureThreshold: 20
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /auth/
+              port: http
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+          - mountPath: /scripts
+            name: scripts
+      volumes:
+      - configMap:
+          defaultMode: 365
+          name: keycloak
+        name: scripts
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: "keycloak"
+      terminationGracePeriodSeconds: 60
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}
+

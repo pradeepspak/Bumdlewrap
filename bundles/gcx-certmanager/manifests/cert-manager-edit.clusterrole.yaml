@@ -1,0 +1,18 @@
+metadata:
+  labels:
+    app: cert-manager
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - certificates
+  - certificaterequests
+  - issuers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

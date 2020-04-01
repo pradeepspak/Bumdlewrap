@@ -1,0 +1,9 @@
+spec:
+  {% if storage_class_name %}
+  storageClassName: {{ storage_class_name }}
+  {% endif %}
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{storage_size}}

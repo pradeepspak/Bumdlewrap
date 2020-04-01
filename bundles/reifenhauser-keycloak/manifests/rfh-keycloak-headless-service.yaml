@@ -1,0 +1,17 @@
+metadata:
+  labels:
+    app: {{name}}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{internal_port}}
+      protocol: TCP
+    - name: jgroups
+      port: 7600
+      protocol: TCP
+      targetPort: jgroups
+  selector:
+    app: {{name}}

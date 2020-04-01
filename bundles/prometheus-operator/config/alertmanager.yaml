@@ -1,0 +1,14 @@
+global:
+  resolve_timeout: 5m
+route:
+  group_by: ["job"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: "opsgenie"
+receivers:
+  - name: opsgenie
+    opsgenie_configs:
+      - api_key:
+        teams: ${opsgenie_team}
+        tags: "k8s, ${node_name}"

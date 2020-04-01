@@ -1,0 +1,7 @@
+spec:
+  storageClassName: {{storage_class_name}}
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{storage_size}}

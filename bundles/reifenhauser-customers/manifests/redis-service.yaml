@@ -1,0 +1,9 @@
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    protocol: TCP
+  selector:
+    app: redis
+    cust: {{customer}}
+  type: ClusterIP

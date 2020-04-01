@@ -1,0 +1,16 @@
+metadata:
+  labels:
+    app: ingress-nginx
+  name: nginx-configuration
+data:
+  body-size: 64m
+  hsts-include-subdomains: "false"
+  http-redirect-code: "301"
+  proxy-buffer-size: 16k
+  proxy-connect-timeout: "15"
+  proxy-read-timeout: "600"
+  proxy-send-timeout: "600"
+  server-name-hash-bucket-size: "256"
+  proxy-body-size: 10M
+  limit-req-status-code: "429"
+

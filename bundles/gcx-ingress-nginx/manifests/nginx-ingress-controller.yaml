@@ -1,0 +1,70 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: ingress-nginx
+  name: nginx-ingress-controller
+spec:
+  selector:
+    matchLabels:
+      app: ingress-nginx
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ingress-nginx
+    spec:
+      serviceAccount: nginx-ingress-serviceaccount
+      serviceAccountName: nginx-ingress-serviceaccount
+      containers:
+      - args:
+        - /nginx-ingress-controller
+        - --default-backend-service=$(POD_NAMESPACE)/{{default_backend_service}}
+        - --configmap=$(POD_NAMESPACE)/nginx-configuration
+        - --tcp-services-configmap=$(POD_NAMESPACE)/tcp-services
+        - --udp-services-configmap=$(POD_NAMESPACE)/udp-services
+        - --annotations-prefix=nginx.ingress.kubernetes.io
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.25.1
+        imagePullPolicy: IfNotPresent
+        name: nginx-ingress-controller
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          name: https
+          protocol: TCP

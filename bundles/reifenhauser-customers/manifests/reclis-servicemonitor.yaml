@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: reclis-{{customer}}
+  labels:
+    app: reclis
+    cust: {{customer}}
+spec:
+  endpoints:
+  - interval: 60s
+    path: /metrics
+    port: metrics
+    scheme: http
+  podTargetLabels:
+    - cust
+    - proj
+    - app
+    - env
+  jobLabel: reclis
+  namespaceSelector:
+    matchNames:
+    - {{namespace}}
+  selector:
+    matchLabels:
+      app: reclis
+      cust: {{customer}}

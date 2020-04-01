@@ -1,0 +1,80 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: tsdbviewer
+  name: tsdbviewer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tsdbviewer
+  template:
+    metadata:
+      labels:
+        app: tsdbviewer
+        tsdbconn: "true"
+    spec:
+      initContainers:
+        - image: busybox
+          name: grafana-chwoner
+          command: ["chown", "-R", "472:472", "/data"]
+          volumeMounts:
+          - mountPath: /data
+            name: grafana-data
+      containers:
+        - image: {{registry_host}}/{{gatekeeper_image}}:{{gatekeeper_version}}
+          name: keycloak-gatekeeper
+          ports:
+            - containerPort: 80
+              name: gk-http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi
+          volumeMounts:
+            - name: gatekeeper-config
+              mountPath: /config
+          args:
+            - "--config"
+            - "/config/config.yaml"
+        - image: grafana/grafana:5.4.3
+          name: grafana
+          ports:
+            - containerPort: 3000
+              name: http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 100m
+              memory: 150Mi
+          env:
+            - name: GF_INSTALL_PLUGINS
+              value: grafana-piechart-panel
+            - name: GF_AUTH_PROXY_ENABLED
+              value: "true"
+            - name: GF_AUTH_PROXY_HEADER_NAME
+              value: "X-Auth-Username"
+            - name: GF_AUTH_PROXY_HEADERS
+              value: "Email:X-Auth-Email Name:X-Auth-Name"
+            - name: GF_USERS_AUTO_ASSIGN_ORG
+              value: "True"
+            - name: GF_USERS_AUTO_ASSIGN_ORG_ROLE
+              value: "Editor"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "{{admin_password}}"
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: tsdbviewer
+        - name: gatekeeper-config
+          configMap:
+            name: gatekeeper-config

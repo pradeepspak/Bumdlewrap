@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vernemq
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+    groups:
+    - name: vernemq.rules
+      rules:
+      - alert: ManyDisconnectedClients
+        expr: socket_open{service="vernemq"} < sum(queue_processes{service="vernemq"}) - sum(socket_open - socket_close{service="vernemq"})
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Most MQTT Clients are disconnected
+          description: The number of disconnected clients exceeds the number of connected clients.

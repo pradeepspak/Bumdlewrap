@@ -1,0 +1,30 @@
+spec:
+  schedule: "00 * * * *"
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: influx-backup
+        spec:
+          containers:
+            - name: backup
+              image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+              env:
+                - name: GOOGLE_SERVICE_ACCOUNT_JSON
+                  value: "/auth/credentials.json"
+                - name: BACKUP_BUCKET_PATH
+                  value: {{backup_bucket}}
+              volumeMounts:
+                - name: backup-credentials
+                  mountPath: "/auth"
+          volumes:
+          - name: backup-credentials
+            secret:
+              secretName: backup-bucket-credentials
+              items:
+                - key: credentials.json
+                  path: credentials.json
+          restartPolicy: Never

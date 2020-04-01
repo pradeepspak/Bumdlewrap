@@ -1,0 +1,23 @@
+data:
+  advanced.config: |
+    [
+     {logger,
+         [{backends,['Elixir.LogLagerBackend']},
+          {handle_otp_reports,false},
+          {level,debug},
+          {'Elixir.LogLagerBackend',
+              [{format,{'Elixir.LoggerPlugin.JsonLogFormatter',format}},
+               {metadata,
+                   [application,
+                    client_id,
+                    level,
+                    message,
+                    module,
+                    payload,
+                    plugin,
+                    reason,
+                    reccon_id,
+                    topic,
+                    xml]},
+               {level,info}]}]}
+    ].

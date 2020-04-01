@@ -1,0 +1,83 @@
+spec:
+  replicas: {{replicas}}
+  template:
+    metadata:
+      name: {{name}}
+      labels:
+        app: {{name}}
+        env: {{env}}
+        proj: reifenhaeuser
+        cust: all
+        sentry: dus
+        riot-int-api-access: "allow"
+    spec:
+      containers:
+      - name: {{name}}
+        image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "256Mi"
+          requests:
+            cpu: "128m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/status/liveness
+            port: {{port}} 
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/status/readiness
+            port: {{port}}
+          timeoutSeconds: 3
+          initialDelaySeconds: 5
+        ports:
+          - containerPort: {{port}}
+            name: http
+          - containerPort: 9568
+            name: metrics
+        env:
+          - name: REPLACE_OS_VARS
+            value: "{{replace_os_vars}}"
+          - name: SENTRY_DSN
+            value: "{{sentry_dsn}}"
+          - name: ENV
+            value: "{{env}}"
+          - name: MQTT_HOST
+            value: "{{mqtt_host}}"
+          - name: MQTT_CLIENT_ID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: PORT
+            value: "{{port}}"
+          {% if mqtt_user != "" and mqtt_user != None %}
+          - name: MQTT_USERNAME
+            value: "{{mqtt_user}}"
+          - name: MQTT_PASSWORD
+            value: "{{mqtt_pass}}"
+          {% endif %}
+          - name: MQTT_PORT
+            value: "{{mqtt_port}}"
+          - name: RIOT_INTERNAL_API_HOST
+            value: "{{riot_internal_api_host}}"
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/secrets/gcp/reflow-credentials.json"
+          - name: GOOGLE_CLOUD_PROJECT_ID
+            value: "{{gcp_project}}"
+        volumeMounts:
+        - mountPath: /secrets/gcp
+          name: reflow-gcp
+      volumes:
+        - name: reflow-gcp
+          secret:
+            secretName: reflow-gcp-credentials
+            defaultMode: 420
+{% if registry_secret is defined and registry_secret %}
+      imagePullSecrets:
+      - name: {{registry_secret}}
+{% endif %}
+

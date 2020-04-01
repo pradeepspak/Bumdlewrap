@@ -1,0 +1,11 @@
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-ingress-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: nginx-ingress-serviceaccount
+  namespace: {{ namespace }}
+- kind: ServiceAccount
+  name: nginx-ingress-serviceaccount
+  namespace: ingress-nginx

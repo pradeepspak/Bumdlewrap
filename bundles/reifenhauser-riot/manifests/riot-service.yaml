@@ -1,0 +1,19 @@
+metadata:
+  labels:
+    app: riot
+    env: {{env}}
+spec:
+  type: ClusterIP
+  ports:
+    - name: riot-port
+      port: 80
+      targetPort: 4000
+      protocol: TCP
+    - name: riot-internal-port
+      port: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9568
+      protocol: TCP
+  selector:
+    app: {{name}}

@@ -1,0 +1,50 @@
+apiVersion: extensions/v1beta1
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{app}}
+        env: {{env}}
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.13.9
+        resources:
+          limits:
+            cpu: "512m"
+            memory: "128Mi"
+          requests:
+            cpu: "128m"
+            memory: "64Mi"
+        livenessProbe:
+          tcpSocket:
+            port: 1883
+        readinessProbe:
+          tcpSocket:
+            port: 1883
+        ports:
+          - name: mqtt
+            containerPort: 1883
+          - name: mqtt-tls
+            containerPort: 8883
+        volumeMounts:
+          - mountPath: "/etc/nginx/nginx.conf"
+            name: nginx-conf
+            subPath: nginx.conf
+          - mountPath: "/etc/nginx/stream-conf.d/"
+            name: nginx-stream-conf-d
+          - mountPath: "/etc/tls-certs/"
+            name: nginx-tls-certs
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-conf
+          items:
+            - key: nginx.conf
+              path: nginx.conf
+      - name: nginx-stream-conf-d
+        configMap:
+          name: nginx-stream-conf-d
+      - name: nginx-tls-certs
+        secret:
+          secretName: rfh-nginx-certs

@@ -1,0 +1,185 @@
+metadata:
+  labels:
+    app: {{name}}
+    env: {{env}}
+  name: {{name}}
+spec:
+  serviceName: {{name}}-headless
+  replicas: {{replicas}}
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: {{name}}
+      env: {{env}}
+  template:
+    metadata:
+      labels:
+        app: {{name}}
+        env: {{env}}
+      name: {{name}}
+    spec:
+      containers:
+      - image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+        imagePullPolicy: Always
+{% if registry_secret is defined and registry_secret %}
+        imagePullSecrets:
+        - name: {{registry_secret}}
+{% endif %}
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - "-c"
+              - "/vernemq/bin/vernemq ping | grep pong"
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: vernemq
+        env:
+        - name: CLIENT_ID_RIOT
+          value: "riot"
+        - name: CLIENT_ID_RECLIS
+          value: "reclis"
+        - name: CLIENT_ID_REFLOW
+          value: "reflow"
+        - name: CLIENT_ID_NOWODSKI
+          value: "nowodski"
+        - name: CLIENT_ID_SIGNED_URL_SERVICE
+          value: "signed-url-service"
+        - name: CLIENT_ID_LOGGER
+          value: "logger"
+        - name: CLIENT_ID_ADMIN
+          value: "admin"
+        - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
+          value: "1"
+        - name: DOCKER_VERNEMQ_KUBERNETES_APP_LABEL
+          value: "vernemq"
+        - name: DOCKER_VERNEMQ_KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - containerPort: 1883
+          name: mqtt
+          protocol: TCP
+        - containerPort: 4369
+          name: epmd
+        - containerPort: 8080
+          name: ws
+          protocol: TCP
+        - containerPort: 8888
+          name: statsui
+          protocol: TCP
+        - containerPort: 9100
+        - containerPort: 9101
+        - containerPort: 9102
+        - containerPort: 9103
+        - containerPort: 9104
+        - containerPort: 9105
+        - containerPort: 9106
+        - containerPort: 9107
+        - containerPort: 9108
+        - containerPort: 9109
+        - containerPort: 9999
+          name: metrics
+          protocol: TCP
+        - containerPort: 44053
+          name: clustering
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - "-c"
+              - "/vernemq/bin/vernemq ping | grep pong"
+          failureThreshold: 3
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: "128m"
+            memory: "1Gi"
+          limits:
+            cpu: "512m"
+            memory: "2Gi"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /vernemq/etc/advanced.config
+          name: config-advanced
+          subPath: advanced.config
+        - mountPath: /vernemq/etc/vernemq.conf.local
+          name: config-conf-local
+          subPath: vernemq.conf.local
+        - mountPath: /vernemq/etc/vmq.acl
+          name: config-vmqacl
+          subPath: vmq.acl
+        - name: vernemq-data
+          mountPath: /vernemq/data
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          runAsUser: 10000
+        #lifecycle:
+        #  preStop:
+        #    exec:
+        #      command: [
+        #        # See vernemq  https://docs.vernemq.com/clustering/introduction
+        #        "vmq-admin", "cluster", "leave", "node=VerneMQ@${MY_POD_NAME}.vernemq-headless.stage.svc.cluster.local", "-k"
+        #      ]
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 10000
+      terminationGracePeriodSeconds: 10
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: "kubernetes.io/hostname"
+                labelSelector:
+                  matchLabels:
+                    app: {{name}}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: advanced.config
+            path: advanced.config
+          name: vernemq-advanced
+        name: config-advanced
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: vernemq.conf.local
+            path: vernemq.conf.local
+          name: vernemq-conf-local
+        name: config-conf-local
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: vmq.acl
+            path: vmq.acl
+          name: vernemq-vmqacl
+        name: config-vmqacl
+  volumeClaimTemplates:
+  - metadata:
+      name: vernemq-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi

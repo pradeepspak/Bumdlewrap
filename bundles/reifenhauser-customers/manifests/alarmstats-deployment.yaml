@@ -1,0 +1,137 @@
+metadata:
+  labels:
+    app: alarmstats
+    cust: {{customer}}
+  name: alarmstats
+spec:
+  replicas: {{replicas}}
+  selector:
+    matchLabels:
+      app: alarmstats
+      cust: {{customer}}
+  template:
+    metadata:
+      labels:
+        app: alarmstats
+        cust: {{customer}}
+        tsdbconn: "true"
+    spec:
+      initContainers:
+        - name: clone-dashboards
+          image: alpine/git
+          command:
+            - "git"
+            - "clone"
+            - "{{alarmstats_git_repository}}"
+            - "/config"
+            - "--branch"
+            - "{{env}}"
+          volumeMounts:
+            - name: alarmstats-ssh
+              mountPath: /root/.ssh
+            - name: grafana-config
+              mountPath: /config
+      containers:
+        - image: {{registry_host}}/{{registry_image}}:{{registry_version}}
+          name: alarmstats
+          ports:
+            - containerPort: 3000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 100m
+              memory: 150Mi
+          env:
+            - name: GF_INSTALL_PLUGINS
+              value: "natel-discrete-panel,grafana-piechart-panel,petrslavotinek-carpetplot-panel"
+            - name: GF_USERS_DEFAULT_THEME
+              value: "light"
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "{{gf_security_admin_password}}"
+            - name: GF_SECURITY_SECRET_KEY
+              value: "{{gf_security_secret_key}}"
+            - name: GF_SECURITY_DISABLE_GRAVATAR
+              value: "true"
+            - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+              value: "false"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+            - name: GF_AUTH_DISABLE_SIGNOUT_MENU
+              value: "true"
+            - name: GF_AUTH_OAUTH_AUTO_LOGIN
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_NAME
+              value: "OAuth"
+            - name: GF_AUTH_GENERIC_OAUTH_ENABLED
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_ALLOWED_DOMAINS
+              value: "{{gf_auth_generic_oauth_allowed_domains}}"
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+              value: "{{gf_auth_generic_oauth_client_id}}"
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{bw_password_container}}
+                  key: {{keycloak_clientsecret}}
+            - name: GF_AUTH_GENERIC_OAUTH_SCOPES
+              value: "openid profile email"
+            - name: GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_NAME
+              value: "email"
+            - name: GF_AUTH_GENERIC_OAUTH_AUTH_URL
+              value: "https://{{keycloak_external_host}}/auth/realms/{{keycloak_realm}}/protocol/openid-connect/auth"
+            - name: GF_AUTH_GENERIC_OAUTH_TOKEN_URL
+              value: "https://{{keycloak_external_host}}/auth/realms/{{keycloak_realm}}/protocol/openid-connect/token"
+            - name: GF_AUTH_GENERIC_OAUTH_API_URL
+              value: "https://{{keycloak_external_host}}/auth/realms/{{keycloak_realm}}/protocol/openid-connect/userinfo"
+            - name: GF_SERVER_ROOT_URL
+              value: "https://{{gf_server_root_url}}"
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
+          volumeMounts:
+            - name: grafana-config
+              mountPath: /etc/grafana/provisioning
+            - name: influxdb-link
+              mountPath: /etc/grafana/provisioning/datasources
+        - name: update-dashboards
+          image: alpine
+          command:
+            - "/bin/sh"
+          args:
+            [
+              "-c",
+              "apk add --no-cache git openssh && cd /config && watch -n 60 -t git pull",
+            ]
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 100m
+              memory: 150Mi
+          volumeMounts:
+            - name: alarmstats-ssh
+              mountPath: /root/.ssh
+            - name: grafana-config
+              mountPath: /config
+      volumes:
+        - name: influxdb-link
+          configMap:
+            name: alarmstats-config
+        - name: grafana-config
+          emptyDir: {}
+        - name: alarmstats-ssh
+          secret:
+            defaultMode: 0600
+            secretName: alarmstats-ssh

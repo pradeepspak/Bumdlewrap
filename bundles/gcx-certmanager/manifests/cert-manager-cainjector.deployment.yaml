@@ -1,0 +1,37 @@
+metadata:
+  labels:
+    app: cainjector
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: cainjector
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: cainjector
+    spec:
+      containers:
+      - args:
+        - --v=2
+        - --leader-election-namespace=$(POD_NAMESPACE)
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: quay.io/jetstack/cert-manager-cainjector:v0.10.1
+        imagePullPolicy: IfNotPresent
+        name: cainjector
+      restartPolicy: Always
+      serviceAccount: cert-manager-cainjector
+      serviceAccountName: cert-manager-cainjector

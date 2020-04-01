@@ -1,0 +1,13 @@
+metadata:
+  labels:
+    app: webhook
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 6443
+  selector:
+    app: webhook
+  sessionAffinity: None
+  type: ClusterIP
